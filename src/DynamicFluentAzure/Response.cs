@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace Cyan.Fluent
+namespace DynamicFluentAzure
 {
     public class Response<T>
     {

@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Cyan.Interfaces;
 using UXRisk.Lib.Common.Models;
 
-namespace Cyan.Fluent
+namespace DynamicFluentAzure
 {
     public class FluentCyan : IFluentCyan
     {

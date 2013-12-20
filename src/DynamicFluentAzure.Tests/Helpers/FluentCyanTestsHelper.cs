@@ -1,8 +1,5 @@
 ﻿using System.Configuration;
 using System.Threading.Tasks;
-using Cyan.Fluent;
-using Cyan.Interfaces;
-using Cyan.Policies;
 using FakeItEasy;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
@@ -10,12 +7,10 @@ using UXRisk.Lib.Common.Interfaces.Services;
 using UXRisk.Lib.Common.Models;
 using UXRisk.Lib.Common.Services;
 
-namespace Cyan.Tests.Helpers
+namespace DynamicFluentAzure.Tests.Helpers
 {
     public static class FluentCyanTestsHelper
     {
-        internal static ICyanClient CyanClient;
-
         internal static void AddCyanSpecificStuff(Response<JsonObject> updatedJson, string entityId)
         {
             updatedJson.Result.Add("RowKey", entityId);
@@ -31,20 +26,6 @@ namespace Cyan.Tests.Helpers
         internal static IAzureTable<T> GetAzureTable<T>() where T : ITableEntity, new()
         {
             return new AzureTable<T>(GetAccount());
-        }
-
-        internal static ICyanClient GetCyanClient()
-        {
-            if (CyanClient == null)
-                CyanClient = new CyanClient(GetAccount().Credentials.AccountName, GetAccount().Credentials.ExportBase64EncodedKey(),
-                    true, CyanRetryPolicy.Default);
-
-            return CyanClient;
-        }
-
-        internal static ICyanClient GetFakeCyanClient()
-        {
-            return A.Fake<ICyanClient>();
         }
 
         internal static async Task<Response<JsonObject>> GivenOldETag(FluentCyan client, string tableName)

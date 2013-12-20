@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using UXRisk.Lib.Common.Models;
 
-namespace Cyan.Fluent
+namespace DynamicFluentAzure
 {
     public interface IFluentCyan
     {

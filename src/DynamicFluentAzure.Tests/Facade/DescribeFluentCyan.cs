@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Mail;
 using System.Threading.Tasks;
-using FakeItEasy;
+using DynamicFluentAzure.Tests.Helpers;
 using FluentAssertions;
 using NUnit.Framework;
 using UXRisk.Lib.Common.Models;
 
-namespace Cyan.Tests.Facade
+namespace DynamicFluentAzure.Tests.Facade
 {
     [TestFixture]
     public class DescribeFluentCyan

@@ -1,7 +1,7 @@
 ﻿using System;
 using UXRisk.Lib.Common.Models;
 
-namespace Cyan.Tests.Helpers
+namespace DynamicFluentAzure.Tests.Helpers
 {
     public static class JsonObjectFactory
     {

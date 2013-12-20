@@ -1,6 +1,6 @@
 ﻿using Microsoft.WindowsAzure.Storage.Table;
 
-namespace Cyan.Tests.Helpers
+namespace DynamicFluentAzure.Tests.Helpers
 {
     internal class TemporaryObject : TableEntity
     {
