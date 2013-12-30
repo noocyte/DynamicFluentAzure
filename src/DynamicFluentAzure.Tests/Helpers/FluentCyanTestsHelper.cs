@@ -42,5 +42,15 @@ namespace DynamicFluentAzure.Tests.Helpers
             var secondResponse = await client.IntoTable(tableName).MergeAsync(secondEntity.Result).ConfigureAwait(false);
             return firstResponse;
         }
+
+        internal static CloudTableClient GetTableClient()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        internal static CloudTableClient GetFakeTableClient()
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }
