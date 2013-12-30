@@ -52,26 +52,37 @@ namespace DynamicFluentAzure
             return new Response<JsonObject>(HttpStatusCode.Created, entity.ToJsonObject());
         }
 
-        //public async Task<Response<JsonObject>> GetByIdAsync(string id)
-        //{
-        //    if (string.IsNullOrEmpty(id))
-        //        throw new ArgumentNullException("id");
+        public async Task<Response<JsonObject>> GetByIdAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentNullException("id");
 
-        //    var table = await DefineTable().ConfigureAwait(false);
-        //    var items = await table.Query("PK", id, filter: "sys_deleted ne true").ConfigureAwait(false);
-        //    var result = items.ToList();
-        //    var json = new JsonObject();
-        //    var status = HttpStatusCode.NotFound;
+            var table = await DefineTable().ConfigureAwait(false);
 
-        //    // ReSharper disable once UseMethodAny.0
-        //    if (result.Count() > 0)
-        //    {
-        //        json = result.First().ToJsonObject();
-        //        status = HttpStatusCode.OK;
-        //    }
+            var query =
+                new TableQuery<DynamicTableEntity>();
+            query.Where(TableQuery.CombineFilters(
+                 TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, "PK"),
+                 TableOperators.And,
+                 TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, id)));
+            query.Where(TableQuery.GenerateFilterConditionForBool("sys_deleted", "ne", true));
 
-        //    return new Response<JsonObject>(status, json);
-        //}
+
+            var items = table.ExecuteQuery(query);
+                //.Query("PK", id, filter: "sys_deleted ne true").ConfigureAwait(false);
+            var result = items.ToList();
+            var json = new JsonObject();
+            var status = HttpStatusCode.NotFound;
+
+            // ReSharper disable once UseMethodAny.0
+            if (result.Count() > 0)
+            {
+                json = result.First().ToJsonObject();
+                status = HttpStatusCode.OK;
+            }
+
+            return new Response<JsonObject>(status, json);
+        }
 
         public async Task<Response<IEnumerable<JsonObject>>> GetAllAsync()
         {
@@ -97,17 +108,20 @@ namespace DynamicFluentAzure
             return new Response<IEnumerable<JsonObject>>(status, listOfJson);
         }
 
-        //public async Task<Response<JsonObject>> MergeAsync(JsonObject json)
-        //{
-        //    if (json == null)
-        //        throw new ArgumentNullException("json");
+        public async Task<Response<JsonObject>> MergeAsync(JsonObject json)
+        {
+            if (json == null)
+                throw new ArgumentNullException("json");
 
-        //    var table = await DefineTable().ConfigureAwait(false);
-        //    var entity = json.ToCyanEntity();
-        //    var result = await table.Merge(entity).ConfigureAwait(false);
+            var table = await DefineTable().ConfigureAwait(false);
+            var entity = json.ToDynamicEntity();
 
-        //    return new Response<JsonObject>(HttpStatusCode.OK, result.ToJsonObject());
-        //}
+            var operation = TableOperation.Merge(entity);
+            var result = table.Execute(operation);
+            entity = result.Result as DynamicTableEntity;
+
+            return new Response<JsonObject>(HttpStatusCode.OK, entity.ToJsonObject());
+        }
 
         //public async Task<Response<JsonObject>> DeleteAsync(JsonObject json)
         //{
@@ -136,15 +150,7 @@ namespace DynamicFluentAzure
         }
 
 
-        public Task<Response<JsonObject>> GetByIdAsync(string id)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<Response<JsonObject>> MergeAsync(JsonObject json)
-        {
-            throw new NotImplementedException();
-        }
+        
 
         public Task<Response<JsonObject>> DeleteAsync(JsonObject json)
         {

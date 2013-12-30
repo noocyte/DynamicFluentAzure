@@ -39,7 +39,9 @@ namespace DynamicFluentAzure
             var dict = new Dictionary<string, EntityProperty>();
             foreach (var item in oneObject)
             {
-                if (item.Key.Equals(EntityConstants.PartitionKey) || item.Key.Equals(EntityConstants.RowKey))
+                if (item.Key.Equals(EntityConstants.PartitionKey.ToLowerInvariant()) ||
+                    item.Key.Equals(EntityConstants.RowKey.ToLowerInvariant()) ||
+                     item.Key.Equals("etag"))
                     continue;
 
                 EntityProperty property = null;
@@ -73,7 +75,8 @@ namespace DynamicFluentAzure
                     dict.Add(item.Key, property);
             }
 
-            return new DynamicTableEntity(oneObject[EntityConstants.PartitionKey].ToString(), oneObject[EntityConstants.RowKey].ToString(), null, dict);
+            var etag = oneObject.ContainsKey("etag") ? oneObject["etag"].ToString() : null;
+            return new DynamicTableEntity("PK", oneObject.Id, etag, dict);
         }
     }
 }

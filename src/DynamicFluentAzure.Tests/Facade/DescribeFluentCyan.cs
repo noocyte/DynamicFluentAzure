@@ -143,8 +143,8 @@ namespace DynamicFluentAzure.Tests.Facade
             // t
             Assert.That(actual.Status, Is.EqualTo(expected.Status));
             Assert.That(actual.Result.Id, Is.EqualTo(expected.Result.Id));
-            Assert.That(actual.Result.ContainsKey("ETag"));
-            Assert.That(actual.Result.ContainsKey("Timestamp"));
+            Assert.That(actual.Result.ContainsKey("etag"));
+            Assert.That(actual.Result.ContainsKey("timestamp"));
         }
 
         [Test]
@@ -221,7 +221,6 @@ namespace DynamicFluentAzure.Tests.Facade
             var inserted = await _client.IntoTable(TableName).PostAsync(json).ConfigureAwait(false);
             var updatedJson = await _client.FromTable(TableName).GetByIdAsync(entityId).ConfigureAwait(false);
             updatedJson.Result.Add("newField", "someValue");
-            FluentCyanTestsHelper.AddCyanSpecificStuff(updatedJson, entityId);
 
             // w
             var response = await _client.IntoTable(TableName).MergeAsync(updatedJson.Result).ConfigureAwait(false);
