@@ -6,6 +6,7 @@ using Microsoft.WindowsAzure.Storage.Table;
 using UXRisk.Lib.Common.Interfaces.Services;
 using UXRisk.Lib.Common.Models;
 using UXRisk.Lib.Common.Services;
+using Microsoft.WindowsAzure;
 
 namespace DynamicFluentAzure.Tests.Helpers
 {
@@ -45,12 +46,8 @@ namespace DynamicFluentAzure.Tests.Helpers
 
         internal static CloudTableClient GetTableClient()
         {
-            throw new System.NotImplementedException();
-        }
-
-        internal static CloudTableClient GetFakeTableClient()
-        {
-            throw new System.NotImplementedException();
+            var storageAccount = CloudStorageAccount.Parse(CloudConfigurationManager.GetSetting("StorageConnection"));
+            return storageAccount.CreateCloudTableClient();
         }
     }
 }

@@ -38,7 +38,7 @@ namespace DynamicFluentAzure.Tests.Facade
         {
             // g
             const string tableName = "";
-            var fakeClient = FluentCyanTestsHelper.GetFakeTableClient();
+            var fakeClient = FluentCyanTestsHelper.GetTableClient();
             var client = new FluentCyan(fakeClient);
 
             // w
