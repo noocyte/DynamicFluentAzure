@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.WindowsAzure.Storage.Table;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
@@ -8,12 +9,14 @@ namespace DynamicFluentAzure
 {
     public class FluentCyan : IFluentCyan
     {
-        private readonly ICyanClient _tableClient;
         private string _tableName;
+        private CloudTableClient _client;
+        private static IDictionary<string, CloudTable> _tables;
 
-        public FluentCyan(ICyanClient tableClient)
+        public FluentCyan(CloudTableClient client)
         {
-            _tableClient = tableClient;
+            _client = client;
+            _tables = new Dictionary<string, CloudTable>();
         }
 
         public IFluentCyan IntoTable(string tableName)
@@ -40,7 +43,7 @@ namespace DynamicFluentAzure
                 throw new ArgumentNullException("json");
 
             var table = await DefineTable().ConfigureAwait(false);
-            var entity = json.ToCyanEntity();
+            var entity = json.ToDynamicEntity();
             var result = await table.Insert(entity).ConfigureAwait(false);
 
             return new Response<JsonObject>(HttpStatusCode.Created, result.ToJsonObject());
@@ -112,12 +115,16 @@ namespace DynamicFluentAzure
             return new Response<JsonObject>(HttpStatusCode.OK, result);
         }
 
-        internal async Task<ICyanTable> DefineTable()
+        internal async Task<CloudTable> DefineTable()
         {
             _tableName = _tableName.ToLowerInvariant();
-            await _tableClient.TryCreateTable(_tableName).ConfigureAwait(false);
-            var table = _tableClient[_tableName];
-            return table;
+            if (_tables.ContainsKey(_tableName))
+                return _tables[_tableName];
+
+            var table = tableClient.GetTableReference(_tableName);
+            
+            return _tables[_tableName];
+
         }
     }
 }
