@@ -180,8 +180,7 @@ namespace DynamicFluentAzure.Tests.Facade
         public async Task ItShouldPostOneRecord_GivenValidJsonObject()
         {
             // g 
-            var objectId = Guid.NewGuid().ToString();
-            var json = JsonObjectFactory.CreateJsonObjectForPost(id: objectId);
+            var json = JsonObjectFactory.CreateJsonObjectForPost();
 
             // w
             var response = await _client.IntoTable(TableName).PostAsync(json).ConfigureAwait(false);

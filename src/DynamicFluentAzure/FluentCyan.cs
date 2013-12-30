@@ -1,5 +1,6 @@
 ﻿using Microsoft.WindowsAzure.Storage.Table;
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
@@ -46,8 +47,9 @@ namespace DynamicFluentAzure
             var entity = json.ToDynamicEntity();
             TableOperation insertOperation = TableOperation.Insert(entity);
             var result = await table.ExecuteAsync(insertOperation).ConfigureAwait(false);
+            entity = result.Result as DynamicTableEntity;
 
-            return new Response<JsonObject>(HttpStatusCode.Created, (JsonObject)result.Result);
+            return new Response<JsonObject>(HttpStatusCode.Created, entity.ToJsonObject());
         }
 
         //public async Task<Response<JsonObject>> GetByIdAsync(string id)
@@ -71,24 +73,29 @@ namespace DynamicFluentAzure
         //    return new Response<JsonObject>(status, json);
         //}
 
-        //public async Task<Response<IEnumerable<JsonObject>>> GetAllAsync()
-        //{
-        //    var table = await DefineTable().ConfigureAwait(false);
-        //    var items = await table.Query("PK").ConfigureAwait(false);
-        //    var result = items.ToList();
+        public async Task<Response<IEnumerable<JsonObject>>> GetAllAsync()
+        {
+            var table = await DefineTable().ConfigureAwait(false);
 
-        //    var status = HttpStatusCode.NotFound;
-        //    var listOfJson = new List<JsonObject>();
+            var query = new TableQuery<DynamicTableEntity>()
+                .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, "PK"));
 
-        //    // ReSharper disable once UseMethodAny.0
-        //    if (result.Count() > 0)
-        //    {
-        //        listOfJson.AddRange(result.Select(ce => ce.ToJsonObject()));
-        //        status = HttpStatusCode.OK;
-        //    }
+            var items = table.ExecuteQuery(query);
 
-        //    return new Response<IEnumerable<JsonObject>>(status, listOfJson);
-        //}
+            var result = items.ToList();
+
+            var status = HttpStatusCode.NotFound;
+            var listOfJson = new List<JsonObject>();
+
+            // ReSharper disable once UseMethodAny.0
+            if (result.Count() > 0)
+            {
+                listOfJson.AddRange(result.Select(ce => ce.ToJsonObject()));
+                status = HttpStatusCode.OK;
+            }
+
+            return new Response<IEnumerable<JsonObject>>(status, listOfJson);
+        }
 
         //public async Task<Response<JsonObject>> MergeAsync(JsonObject json)
         //{
@@ -130,11 +137,6 @@ namespace DynamicFluentAzure
 
 
         public Task<Response<JsonObject>> GetByIdAsync(string id)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<Response<IEnumerable<JsonObject>>> GetAllAsync()
         {
             throw new NotImplementedException();
         }

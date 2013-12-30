@@ -21,7 +21,7 @@ namespace DynamicFluentAzure.Tests.Helpers
 
         internal static CloudStorageAccount GetAccount()
         {
-            return CloudStorageAccount.Parse(ConfigurationManager.AppSettings["StorageConnectionString"]);
+            return CloudStorageAccount.Parse(ConfigurationManager.AppSettings["StorageConnection"]);
         }
 
         internal static IAzureTable<T> GetAzureTable<T>() where T : ITableEntity, new()

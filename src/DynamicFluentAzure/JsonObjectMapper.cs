@@ -10,25 +10,26 @@ namespace DynamicFluentAzure
 {
     public static class JsonObjectMapper
     {
-        //public static JsonObject ToJsonObject(this DynamicTableEntity ce)
-        //{
-        //    var json = new JsonObject { { "ETag", ce.ETag }, { "Timestamp", ce.Timestamp } };
-        //    foreach (var field in ce.Fields)
-        //    {
-        //        json[field.Key] =
-        //            IsArray(field)
-        //                ? JsonConvert.DeserializeObject<object[]>(field.Value.ToString())
-        //                : field.Value;
-        //    }
-        //    json.EnsureValidSystemProperties();
-        //    return json;
-        //}
-
-        private static bool IsArray(KeyValuePair<string, object> field)
+        public static JsonObject ToJsonObject(this DynamicTableEntity ce)
         {
-            return field.Key.Contains("_ids") &&
-                   field.Value.ToString().StartsWith("[") &&
-                   field.Value.ToString().EndsWith("]");
+            var json = new JsonObject { { "ETag", ce.ETag }, { "Timestamp", ce.Timestamp } };
+            foreach (var field in ce.Properties)
+            {
+                json[field.Key] =
+                    IsArray(field)
+                        ? JsonConvert.DeserializeObject<object[]>(field.Value.StringValue)
+                        : field.Value.PropertyAsObject;
+            }
+            json.EnsureValidSystemProperties();
+            return json;
+        }
+
+        private static bool IsArray(KeyValuePair<string, EntityProperty> field)
+        {
+            return field.Value.PropertyType.Equals("String") &&
+                   field.Key.Contains("_ids") &&
+                   field.Value.StringValue.StartsWith("[") &&
+                   field.Value.StringValue.EndsWith("]");
         }
 
         public static DynamicTableEntity ToDynamicEntity(this JsonObject oneObject)
