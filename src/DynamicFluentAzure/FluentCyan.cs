@@ -12,12 +12,12 @@ namespace DynamicFluentAzure
     {
         private string _tableName;
         private readonly CloudTableClient _client;
-        private static IDictionary<string, CloudTable> _tables;
+        internal static IDictionary<string, CloudTable> Tables;
 
         public FluentCyan(CloudTableClient client)
         {
             _client = client;
-            _tables = new Dictionary<string, CloudTable>();
+            Tables = new Dictionary<string, CloudTable>();
         }
 
         public IFluentCyan IntoTable(string tableName)
@@ -39,7 +39,7 @@ namespace DynamicFluentAzure
             if (json == null)
                 throw new ArgumentNullException("json");
 
-            var table = await DefineTableAsync().ConfigureAwait(false);
+            var table = await DefineTableAsync(CreateCloudTable).ConfigureAwait(false);
             var entity = json.ToDynamicEntity();
             var insertOperation = TableOperation.Insert(entity);
             var jsonObj = await ExecuteOperationAsync(table, insertOperation).ConfigureAwait(false);
@@ -52,7 +52,7 @@ namespace DynamicFluentAzure
             if (string.IsNullOrEmpty(id))
                 throw new ArgumentNullException("id");
 
-            var table = await DefineTableAsync().ConfigureAwait(false);
+            var table = await DefineTableAsync(CreateCloudTable).ConfigureAwait(false);
 
             var query =
                 new TableQuery<DynamicTableEntity>();
@@ -78,7 +78,7 @@ namespace DynamicFluentAzure
 
         public async Task<Response<IEnumerable<JsonObject>>> GetAllAsync()
         {
-            var table = await DefineTableAsync().ConfigureAwait(false);
+            var table = await DefineTableAsync(CreateCloudTable).ConfigureAwait(false);
 
             var query = new TableQuery<DynamicTableEntity>()
                 .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, "PK"));
@@ -105,7 +105,7 @@ namespace DynamicFluentAzure
             if (json == null)
                 throw new ArgumentNullException("json");
 
-            var table = await DefineTableAsync().ConfigureAwait(false);
+            var table = await DefineTableAsync(CreateCloudTable).ConfigureAwait(false);
             var entity = json.ToDynamicEntity();
 
             var operation = TableOperation.Merge(entity);
@@ -119,7 +119,7 @@ namespace DynamicFluentAzure
             if (json == null)
                 throw new ArgumentNullException("json");
 
-            var table = await DefineTableAsync().ConfigureAwait(false);
+            var table = await DefineTableAsync(CreateCloudTable).ConfigureAwait(false);
             var entity = json.ToDynamicEntity();
 
             var operation = TableOperation.Delete(entity);
@@ -128,16 +128,22 @@ namespace DynamicFluentAzure
             return new Response<JsonObject>(HttpStatusCode.OK, jsonObj);
         }
 
-        internal async Task<CloudTable> DefineTableAsync()
+        internal async Task<CloudTable> DefineTableAsync(Func<Task<CloudTable>> createIfNotExists)
         {
             _tableName = _tableName.ToLowerInvariant();
-            if (_tables.ContainsKey(_tableName))
-                return _tables[_tableName];
+            if (Tables.ContainsKey(_tableName))
+                return Tables[_tableName];
 
+            var table = await createIfNotExists().ConfigureAwait(false);
+            Tables.Add(_tableName, table);
+            return Tables[_tableName];
+        }
+
+        internal async Task<CloudTable> CreateCloudTable()
+        {
             var table = _client.GetTableReference(_tableName);
             await table.CreateIfNotExistsAsync().ConfigureAwait(false);
-            _tables.Add(_tableName, table);
-            return _tables[_tableName];
+            return table;
         }
 
         internal static async Task<JsonObject> ExecuteOperationAsync(CloudTable table, TableOperation operation)
