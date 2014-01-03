@@ -11,7 +11,7 @@ namespace DynamicFluentAzure
     public class FluentCyan : IFluentCyan
     {
         private string _tableName;
-        private CloudTableClient _client;
+        private readonly CloudTableClient _client;
         private static IDictionary<string, CloudTable> _tables;
 
         public FluentCyan(CloudTableClient client)
@@ -22,11 +22,7 @@ namespace DynamicFluentAzure
 
         public IFluentCyan IntoTable(string tableName)
         {
-            if (String.IsNullOrEmpty(tableName))
-                throw new ArgumentNullException("tableName");
-
-            _tableName = tableName;
-            return this;
+            return FromTable(tableName);
         }
 
         public IFluentCyan FromTable(string tableName)
@@ -43,13 +39,12 @@ namespace DynamicFluentAzure
             if (json == null)
                 throw new ArgumentNullException("json");
 
-            var table = await DefineTable().ConfigureAwait(false);
+            var table = await DefineTableAsync().ConfigureAwait(false);
             var entity = json.ToDynamicEntity();
-            TableOperation insertOperation = TableOperation.Insert(entity);
-            var result = await table.ExecuteAsync(insertOperation).ConfigureAwait(false);
-            entity = result.Result as DynamicTableEntity;
+            var insertOperation = TableOperation.Insert(entity);
+            var jsonObj = await ExecuteOperationAsync(table, insertOperation).ConfigureAwait(false);
 
-            return new Response<JsonObject>(HttpStatusCode.Created, entity.ToJsonObject());
+            return new Response<JsonObject>(HttpStatusCode.Created, jsonObj);
         }
 
         public async Task<Response<JsonObject>> GetByIdAsync(string id)
@@ -57,7 +52,7 @@ namespace DynamicFluentAzure
             if (string.IsNullOrEmpty(id))
                 throw new ArgumentNullException("id");
 
-            var table = await DefineTable().ConfigureAwait(false);
+            var table = await DefineTableAsync().ConfigureAwait(false);
 
             var query =
                 new TableQuery<DynamicTableEntity>();
@@ -67,26 +62,23 @@ namespace DynamicFluentAzure
                  TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, id)));
             query.Where(TableQuery.GenerateFilterConditionForBool("sys_deleted", "ne", true));
 
-
             var items = table.ExecuteQuery(query);
-                //.Query("PK", id, filter: "sys_deleted ne true").ConfigureAwait(false);
             var result = items.ToList();
             var json = new JsonObject();
             var status = HttpStatusCode.NotFound;
 
-            // ReSharper disable once UseMethodAny.0
-            if (result.Count() > 0)
-            {
-                json = result.First().ToJsonObject();
-                status = HttpStatusCode.OK;
-            }
+// ReSharper disable UseMethodAny.3
+            if (result.Count() <= 0) return new Response<JsonObject>(status, json);
+// ReSharper restore UseMethodAny.3
+            json = result.First().ToJsonObject();
+            status = HttpStatusCode.OK;
 
             return new Response<JsonObject>(status, json);
         }
 
         public async Task<Response<IEnumerable<JsonObject>>> GetAllAsync()
         {
-            var table = await DefineTable().ConfigureAwait(false);
+            var table = await DefineTableAsync().ConfigureAwait(false);
 
             var query = new TableQuery<DynamicTableEntity>()
                 .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, "PK"));
@@ -113,14 +105,13 @@ namespace DynamicFluentAzure
             if (json == null)
                 throw new ArgumentNullException("json");
 
-            var table = await DefineTable().ConfigureAwait(false);
+            var table = await DefineTableAsync().ConfigureAwait(false);
             var entity = json.ToDynamicEntity();
 
             var operation = TableOperation.Merge(entity);
-            var result = table.Execute(operation);
-            entity = result.Result as DynamicTableEntity;
+            var jsonObj = await ExecuteOperationAsync(table, operation).ConfigureAwait(false);
 
-            return new Response<JsonObject>(HttpStatusCode.OK, entity.ToJsonObject());
+            return new Response<JsonObject>(HttpStatusCode.OK, jsonObj);
         }
 
         public async Task<Response<JsonObject>> DeleteAsync(JsonObject json)
@@ -128,26 +119,33 @@ namespace DynamicFluentAzure
             if (json == null)
                 throw new ArgumentNullException("json");
 
-            var table = await DefineTable().ConfigureAwait(false);
+            var table = await DefineTableAsync().ConfigureAwait(false);
             var entity = json.ToDynamicEntity();
 
             var operation = TableOperation.Delete(entity);
-            var result = table.Execute(operation);
-            entity = result.Result as DynamicTableEntity;
+            var jsonObj = await ExecuteOperationAsync(table, operation).ConfigureAwait(false);
 
-            return new Response<JsonObject>(HttpStatusCode.OK, entity.ToJsonObject());
+            return new Response<JsonObject>(HttpStatusCode.OK, jsonObj);
         }
 
-        internal async Task<CloudTable> DefineTable()
+        internal async Task<CloudTable> DefineTableAsync()
         {
             _tableName = _tableName.ToLowerInvariant();
             if (_tables.ContainsKey(_tableName))
                 return _tables[_tableName];
 
             var table = _client.GetTableReference(_tableName);
-            await table.CreateIfNotExistsAsync();
+            await table.CreateIfNotExistsAsync().ConfigureAwait(false);
             _tables.Add(_tableName, table);
             return _tables[_tableName];
+        }
+
+        internal static async Task<JsonObject> ExecuteOperationAsync(CloudTable table, TableOperation operation)
+        {
+            var result = await table.ExecuteAsync(operation).ConfigureAwait(false);
+            var entity = result.Result as DynamicTableEntity;
+            var jsonObj = entity.ToJsonObject();
+            return jsonObj;
         }
     }
 }

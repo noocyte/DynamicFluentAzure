@@ -14,9 +14,6 @@ namespace DynamicFluentAzure.Tests.Facade
     [TestFixture]
     public class DescribeFluentCyan
     {
-        private FluentCyan _client;
-        private const string TableName = "TemporaryObject";
-
         [SetUp]
         public void Setup()
         {
@@ -34,6 +31,9 @@ namespace DynamicFluentAzure.Tests.Facade
             }
         }
 
+        private FluentCyan _client;
+        private const string TableName = "TemporaryObject";
+
         [Test]
         public void ItComplainsWhenPassingInEmptyTableName()
         {
@@ -49,7 +49,7 @@ namespace DynamicFluentAzure.Tests.Facade
             act.ShouldThrow<ArgumentNullException>();
         }
 
-    
+
         [Test]
         public void ItComplainsWhenPassingInInvalidTableName()
         {
@@ -65,16 +65,86 @@ namespace DynamicFluentAzure.Tests.Facade
         }
 
         [Test]
-        public async Task ItShouldReturnNotFound_WhenQueryingForOneRecord_GivenNoRecordsExists()
+        public void ItComplains_WhenDeleting_GivenInvalidJsonObject()
         {
             // g
-            var expected = new Response<JsonObject>(HttpStatusCode.NotFound, new JsonObject());
 
             // w
-            var actual = await _client.FromTable("dummy").GetByIdAsync("123").ConfigureAwait(false);
+            Func<Task<Response<JsonObject>>> func =
+                async () => await _client.FromTable("dummy").DeleteAsync(null).ConfigureAwait(false);
 
             // t
-            actual.ShouldBeEquivalentTo(expected);
+            func.ShouldThrow<ArgumentNullException>()
+                .WithMessage("Value cannot be null.\r\nParameter name: json");
+        }
+
+        [Test]
+        public void ItComplains_WhenDeleting_GivenMissingEntity()
+        {
+            // g
+            var entity = JsonObjectFactory.CreateJsonObjectWithETag();
+
+            // w
+            Func<Task<Response<JsonObject>>> func =
+                async () => await _client.FromTable(TableName).DeleteAsync(entity).ConfigureAwait(false);
+
+            // t
+            func.ShouldThrow<StorageException>();
+        }
+
+        [Test]
+        public async Task ItComplains_WhenDeleting_GivenOldETag()
+        {
+            // g 
+            var firstResponse = await FluentCyanTestsHelper.GivenOldETag(_client, TableName);
+
+            // w
+            Func<Task<Response<JsonObject>>> func =
+                async () => await _client.IntoTable(TableName).DeleteAsync(firstResponse.Result).ConfigureAwait(false);
+
+            // t
+            func.ShouldThrow<StorageException>();
+        }
+
+        [Test]
+        public void ItComplains_WhenMerging_GivenInvalidJsonObject()
+        {
+            // g
+
+            // w
+            Func<Task<Response<JsonObject>>> func =
+                async () => await _client.IntoTable("dummy").MergeAsync(null).ConfigureAwait(false);
+
+            // t
+            func.ShouldThrow<ArgumentNullException>()
+                .WithMessage("Value cannot be null.\r\nParameter name: json");
+        }
+
+        [Test]
+        public async Task ItComplains_WhenMerging_GivenOldETag()
+        {
+            // g 
+            var firstResponse = await FluentCyanTestsHelper.GivenOldETag(_client, TableName).ConfigureAwait(false);
+
+            // w
+            Func<Task<Response<JsonObject>>> func =
+                async () => await _client.IntoTable(TableName).MergeAsync(firstResponse.Result).ConfigureAwait(false);
+
+            // t
+            func.ShouldThrow<StorageException>();
+        }
+
+        [Test]
+        public void ItComplains_WhenPosting_GivenInvalidJsonObject()
+        {
+            // g
+
+            // w
+            Func<Task<Response<JsonObject>>> func =
+                async () => await _client.IntoTable("dummy").PostAsync(null).ConfigureAwait(false);
+
+            // t
+            func.ShouldThrow<ArgumentNullException>();
         }
 
         [Test]
@@ -91,106 +161,39 @@ namespace DynamicFluentAzure.Tests.Facade
         }
 
         [Test]
-        public async Task ItShouldReturnNotFound_WhenRetrievingAllRecords_GivenNoRecordsExists()
+        public async Task ItShouldDeleteEntity()
         {
             // g
-            var expected = new Response<IEnumerable<JsonObject>>(HttpStatusCode.NotFound, new List<JsonObject>());
+            var entity = JsonObjectFactory.CreateJsonObjectForPost();
+            await _client.IntoTable(TableName).PostAsync(entity).ConfigureAwait(false);
+            var allEntities = await _client.FromTable(TableName).GetAllAsync().ConfigureAwait(false);
+            allEntities.Result.Count().Should().Be(1);
 
             // w
-            var actual = await _client.FromTable("dummy").GetAllAsync().ConfigureAwait(false);
+            await _client.FromTable(TableName).DeleteAsync(allEntities.Result.First()).ConfigureAwait(false);
 
             // t
-            actual.ShouldBeEquivalentTo(expected);
+            allEntities = await _client.FromTable(TableName).GetAllAsync().ConfigureAwait(false);
+            allEntities.Result.Count().Should().Be(0);
         }
 
         [Test]
-        public async Task ItShouldReturnOK_WhenQueringForAllRecords_GivenRecordsExists()
-        {
-            // g
-            var item1 = new TemporaryObject("PK", Guid.NewGuid().ToString()) { id = "item1" };
-            var item2 = new TemporaryObject("PK", Guid.NewGuid().ToString()) { id = "item2" };
-            var table = FluentCyanTestsHelper.GetAzureTable<TemporaryObject>();
-            table.Add(item1);
-            table.Add(item2);
-
-            var allObjects = new[] { item1, item2 };
-            var expected = new Response<TemporaryObject[]>(HttpStatusCode.OK, allObjects);
-
-            // w
-            var actual = await _client.FromTable(TableName).GetAllAsync().ConfigureAwait(false);
-
-            // t
-            Assert.That(actual.Status, Is.EqualTo(expected.Status));
-            Assert.That(actual.Result.Count(), Is.EqualTo(expected.Result.Count()));
-        }
-
-        [Test]
-        public async Task ItShouldReturnOK_WhenQueringForOneRecord_GivenRecordExists()
-        {
-            // g
-            var objectId = Guid.NewGuid().ToString();
-            var aTimestamp = DateTime.Now;
-
-            var json = JsonObjectFactory.CreateJsonObject(aTimestamp, objectId);
-            var tableObj = new TemporaryObject("PK", objectId) { id = objectId };
-            var table = FluentCyanTestsHelper.GetAzureTable<TemporaryObject>();
-            table.Add(tableObj);
-
-            var expected = new Response<JsonObject>(HttpStatusCode.OK, json);
-
-            // w
-            var actual = await _client.FromTable(TableName).GetByIdAsync(objectId).ConfigureAwait(false);
-
-            // t
-            Assert.That(actual.Status, Is.EqualTo(expected.Status));
-            Assert.That(actual.Result.Id, Is.EqualTo(expected.Result.Id));
-            Assert.That(actual.Result.ContainsKey("etag"));
-            Assert.That(actual.Result.ContainsKey("timestamp"));
-        }
-
-        [Test]
-        public async Task ItShouldReturnNotFound_WhenQueringForOneRecord_GivenRecordExistAndIsMarkedAsDeleted()
-        {
-            // g
-            var objectId = Guid.NewGuid().ToString();
-
-            var tableObj = new TemporaryObject("PK", objectId) { id = objectId, sys_deleted = true};
-            var table = FluentCyanTestsHelper.GetAzureTable<TemporaryObject>();
-            table.Add(tableObj);
-            
-            // w
-            var actual = await _client.FromTable(TableName).GetByIdAsync(objectId).ConfigureAwait(false);
-
-            // t
-            Assert.That(actual.Status, Is.EqualTo(HttpStatusCode.NotFound));
-        }
-
-        [Test]
-        public void ItComplains_WhenPosting_GivenInvalidJsonObject()
-        {
-            // g
-
-            // w
-            Func<Task<Response<JsonObject>>> func = async () => await _client.IntoTable("dummy").PostAsync(null).ConfigureAwait(false);
-
-            // t
-            func.ShouldThrow<ArgumentNullException>();
-        }
-
-        [Test]
-        public async Task ItShouldPostOneRecord_GivenValidJsonObject()
+        public async Task ItShouldMergeWithExitingEntity_GivenNewField()
         {
             // g 
-            var json = JsonObjectFactory.CreateJsonObjectForPost();
+            const string entityId = "one";
+
+            var json = JsonObjectFactory.CreateJsonObjectForPost(entityId);
+            var inserted = await _client.IntoTable(TableName).PostAsync(json).ConfigureAwait(false);
+            var updatedJson = await _client.FromTable(TableName).GetByIdAsync(entityId).ConfigureAwait(false);
+            updatedJson.Result.Add("newField", "someValue");
 
             // w
-            var response = await _client.IntoTable(TableName).PostAsync(json).ConfigureAwait(false);
+            var merged = await _client.IntoTable(TableName).MergeAsync(updatedJson.Result).ConfigureAwait(false);
 
             // t
-            var allResponses = await _client.FromTable(TableName).GetAllAsync().ConfigureAwait(false);
-            allResponses.Result.Count().Should().Be(1);
-            response.Status.Should().Be(HttpStatusCode.Created);
-            response.Result.Id.Should().NotBeEmpty();
+            merged.Result["newField"].Should().Be("someValue");
+            merged.Result["ETag"].Should().NotBe(inserted.Result["ETag"]);
         }
 
         [Test]
@@ -212,115 +215,108 @@ namespace DynamicFluentAzure.Tests.Facade
             merged.Result["ETag"].Should().NotBe(inserted.Result["ETag"]);
         }
 
-
         [Test]
-        public async Task ItShouldMergeWithExitingEntity_GivenNewField()
+        public async Task ItShouldPostOneRecord_GivenValidJsonObject()
         {
             // g 
-            const string entityId = "one";
-
-            var json = JsonObjectFactory.CreateJsonObjectForPost(id: entityId);
-            var inserted = await _client.IntoTable(TableName).PostAsync(json).ConfigureAwait(false);
-            var updatedJson = await _client.FromTable(TableName).GetByIdAsync(entityId).ConfigureAwait(false);
-            updatedJson.Result.Add("newField", "someValue");
+            var json = JsonObjectFactory.CreateJsonObjectForPost();
 
             // w
-            var response = await _client.IntoTable(TableName).MergeAsync(updatedJson.Result).ConfigureAwait(false);
+            var response = await _client.IntoTable(TableName).PostAsync(json).ConfigureAwait(false);
 
             // t
-            var merged = await _client.FromTable(TableName).GetByIdAsync(entityId).ConfigureAwait(false);
-            merged.Result["newField"].Should().Be("someValue");
-            merged.Result["ETag"].Should().NotBe(inserted.Result["ETag"]);
-        }
-
-
-        //[Test]
-        //public async Task ItComplains_WhenMerging_GivenOldETag()
-        //{
-        //    // g 
-        //    var firstResponse = await FluentCyanTestsHelper.GivenOldETag(_client, TableName).ConfigureAwait(false);
-
-        //    // w
-        //    Func<Task<Response<JsonObject>>> func =
-        //        async () => await _client.IntoTable(TableName).MergeAsync(firstResponse.Result).ConfigureAwait(false);
-
-        //    // t
-        //    func.ShouldThrow<CyanException>();
-        //}
-
-        [Test]
-        public void ItComplains_WhenMerging_GivenInvalidJsonObject()
-        {
-            // g
-
-            // w
-            Func<Task<Response<JsonObject>>> func = async () => await _client.IntoTable("dummy").MergeAsync(null).ConfigureAwait(false);
-
-            // t
-            func.ShouldThrow<ArgumentNullException>()
-                .WithMessage("Value cannot be null.\r\nParameter name: json");
+            var allResponses = await _client.FromTable(TableName).GetAllAsync().ConfigureAwait(false);
+            allResponses.Result.Count().Should().Be(1);
+            response.Status.Should().Be(HttpStatusCode.Created);
+            response.Result.Id.Should().NotBeEmpty();
         }
 
         [Test]
-        public void ItComplains_WhenDeleting_GivenInvalidJsonObject()
+        public async Task ItShouldReturnNotFound_WhenQueringForOneRecord_GivenRecordExistAndIsMarkedAsDeleted()
         {
             // g
+            var objectId = Guid.NewGuid().ToString();
+
+            var tableObj = new TemporaryObject("PK", objectId) {id = objectId, sys_deleted = true};
+            var table = FluentCyanTestsHelper.GetAzureTable<TemporaryObject>();
+            table.Add(tableObj);
 
             // w
-            Func<Task<Response<JsonObject>>> func = async () => await _client.FromTable("dummy").DeleteAsync(null).ConfigureAwait(false);
+            var actual = await _client.FromTable(TableName).GetByIdAsync(objectId).ConfigureAwait(false);
 
             // t
-            func.ShouldThrow<ArgumentNullException>()
-                .WithMessage("Value cannot be null.\r\nParameter name: json");
+            Assert.That(actual.Status, Is.EqualTo(HttpStatusCode.NotFound));
         }
 
         [Test]
-        public async Task ItShouldDeleteEntity()
+        public async Task ItShouldReturnNotFound_WhenQueryingForOneRecord_GivenNoRecordsExists()
         {
             // g
-            var entity = JsonObjectFactory.CreateJsonObjectForPost();
-            var response = await _client.IntoTable(TableName).PostAsync(entity).ConfigureAwait(false);
-            var allEntities = await _client.FromTable(TableName).GetAllAsync().ConfigureAwait(false);
-            allEntities.Result.Count().Should().Be(1);
+            var expected = new Response<JsonObject>(HttpStatusCode.NotFound, new JsonObject());
 
             // w
-            await _client.FromTable(TableName).DeleteAsync(allEntities.Result.First()).ConfigureAwait(false);
+            var actual = await _client.FromTable("dummy").GetByIdAsync("123").ConfigureAwait(false);
 
             // t
-            allEntities = await _client.FromTable(TableName).GetAllAsync().ConfigureAwait(false);
-            allEntities.Result.Count().Should().Be(0);
+            actual.ShouldBeEquivalentTo(expected);
         }
 
-        //[Test]
-        //public void ItComplains_WhenDeleting_GivenMissingEntity()
-        //{
-        //    // g
-        //    var entity = JsonObjectFactory.CreateJsonObjectForPost();
+        [Test]
+        public async Task ItShouldReturnNotFound_WhenRetrievingAllRecords_GivenNoRecordsExists()
+        {
+            // g
+            var expected = new Response<IEnumerable<JsonObject>>(HttpStatusCode.NotFound, new List<JsonObject>());
 
-        //    // w
-        //    Func<Task<Response<JsonObject>>> func =
-        //        async () => await _client.FromTable(TableName).DeleteAsync(entity).ConfigureAwait(false);
+            // w
+            var actual = await _client.FromTable("dummy").GetAllAsync().ConfigureAwait(false);
 
-        //    // t
-        //    func.ShouldThrow<CyanException>();
-        //}
+            // t
+            actual.ShouldBeEquivalentTo(expected);
+        }
 
-        //[Test]
-        //public async Task ItComplains_WhenDeleting_GivenOldETag()
-        //{
-        //    // g 
-        //    var firstResponse = await FluentCyanTestsHelper.GivenOldETag(_client, TableName);
+        [Test]
+        public async Task ItShouldReturnOK_WhenQueringForAllRecords_GivenRecordsExists()
+        {
+            // g
+            var item1 = new TemporaryObject("PK", Guid.NewGuid().ToString()) {id = "item1"};
+            var item2 = new TemporaryObject("PK", Guid.NewGuid().ToString()) {id = "item2"};
+            var table = FluentCyanTestsHelper.GetAzureTable<TemporaryObject>();
+            table.Add(item1);
+            table.Add(item2);
 
-        //    // w
-        //    Func<Task<Response<JsonObject>>> func =
-        //        async () => await _client.IntoTable(TableName).DeleteAsync(firstResponse.Result).ConfigureAwait(false);
+            var allObjects = new[] {item1, item2};
+            var expected = new Response<TemporaryObject[]>(HttpStatusCode.OK, allObjects);
 
-        //    // t
-        //    func.ShouldThrow<CyanException>();
-        //}
+            // w
+            var actual = await _client.FromTable(TableName).GetAllAsync().ConfigureAwait(false);
 
+            // t
+            Assert.That(actual.Status, Is.EqualTo(expected.Status));
+            Assert.That(actual.Result.Count(), Is.EqualTo(expected.Result.Count()));
+        }
 
+        [Test]
+        public async Task ItShouldReturnOK_WhenQueringForOneRecord_GivenRecordExists()
+        {
+            // g
+            var objectId = Guid.NewGuid().ToString();
+            var aTimestamp = DateTime.Now;
 
-        
+            var json = JsonObjectFactory.CreateJsonObject(aTimestamp, objectId);
+            var tableObj = new TemporaryObject("PK", objectId) {id = objectId};
+            var table = FluentCyanTestsHelper.GetAzureTable<TemporaryObject>();
+            table.Add(tableObj);
+
+            var expected = new Response<JsonObject>(HttpStatusCode.OK, json);
+
+            // w
+            var actual = await _client.FromTable(TableName).GetByIdAsync(objectId).ConfigureAwait(false);
+
+            // t
+            Assert.That(actual.Status, Is.EqualTo(expected.Status));
+            Assert.That(actual.Result.Id, Is.EqualTo(expected.Result.Id));
+            Assert.That(actual.Result.ContainsKey("etag"));
+            Assert.That(actual.Result.ContainsKey("timestamp"));
+        }
     }
 }

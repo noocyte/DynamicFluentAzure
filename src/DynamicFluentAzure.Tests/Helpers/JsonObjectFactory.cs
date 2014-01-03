@@ -42,5 +42,13 @@ namespace DynamicFluentAzure.Tests.Helpers
             json.EnsureValidSystemProperties();
             return json;
         }
+
+        public static JsonObject CreateJsonObjectWithETag()
+        {
+            const string valueString = "something";
+            var json = new JsonObject { { "ETag", valueString }, { "id", valueString }, { "name", valueString } };
+            json.EnsureValidSystemProperties();
+            return json;
+        }
     }
 }
