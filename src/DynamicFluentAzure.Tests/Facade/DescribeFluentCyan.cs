@@ -4,12 +4,11 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using DynamicFluentAzure.Tests.Helpers;
-using FakeItEasy;
 using FluentAssertions;
 using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Table;
 using NUnit.Framework;
 using UXRisk.Lib.Common.Models;
-using Microsoft.WindowsAzure.Storage.Table;
 
 namespace DynamicFluentAzure.Tests.Facade
 {
@@ -163,6 +162,40 @@ namespace DynamicFluentAzure.Tests.Facade
         }
 
         [Test]
+        public async Task ItShouldCacheTables()
+        {
+            // g
+            const string tablename = "sometable";
+            _client.FromTable(tablename);
+
+            // w
+            await _client.DefineTableAsync(_client.CreateCloudTable).ConfigureAwait(false);
+
+            // t
+            FluentCyan.Tables.ContainsKey(tablename).Should().BeTrue("Did not cache table");
+        }
+
+        [Test]
+        public async Task ItShouldCreateTable_GivenTableHasNotBeenCached()
+        {
+            // g
+            const string tablename = "sometable";
+            var table = new CloudTable(new Uri("http://someurl.com"));
+            var createdTable = false;
+            _client.FromTable(tablename);
+
+            // w
+            await _client.DefineTableAsync(() =>
+            {
+                createdTable = true;
+                return Task.FromResult(table);
+            }).ConfigureAwait(false);
+
+            // t
+            createdTable.Should().BeTrue("did not create table");
+        }
+
+        [Test]
         public async Task ItShouldDeleteEntity()
         {
             // g
@@ -239,7 +272,7 @@ namespace DynamicFluentAzure.Tests.Facade
             // g
             var objectId = Guid.NewGuid().ToString();
 
-            var tableObj = new TemporaryObject("PK", objectId) { id = objectId, sys_deleted = true };
+            var tableObj = new TemporaryObject("PK", objectId) {id = objectId, sys_deleted = true};
             var table = FluentCyanTestsHelper.GetAzureTable<TemporaryObject>();
             table.Add(tableObj);
 
@@ -280,13 +313,13 @@ namespace DynamicFluentAzure.Tests.Facade
         public async Task ItShouldReturnOK_WhenQueringForAllRecords_GivenRecordsExists()
         {
             // g
-            var item1 = new TemporaryObject("PK", Guid.NewGuid().ToString()) { id = "item1" };
-            var item2 = new TemporaryObject("PK", Guid.NewGuid().ToString()) { id = "item2" };
+            var item1 = new TemporaryObject("PK", Guid.NewGuid().ToString()) {id = "item1"};
+            var item2 = new TemporaryObject("PK", Guid.NewGuid().ToString()) {id = "item2"};
             var table = FluentCyanTestsHelper.GetAzureTable<TemporaryObject>();
             table.Add(item1);
             table.Add(item2);
 
-            var allObjects = new[] { item1, item2 };
+            var allObjects = new[] {item1, item2};
             var expected = new Response<TemporaryObject[]>(HttpStatusCode.OK, allObjects);
 
             // w
@@ -305,7 +338,7 @@ namespace DynamicFluentAzure.Tests.Facade
             var aTimestamp = DateTime.Now;
 
             var json = JsonObjectFactory.CreateJsonObject(aTimestamp, objectId);
-            var tableObj = new TemporaryObject("PK", objectId) { id = objectId };
+            var tableObj = new TemporaryObject("PK", objectId) {id = objectId};
             var table = FluentCyanTestsHelper.GetAzureTable<TemporaryObject>();
             table.Add(tableObj);
 
@@ -319,20 +352,6 @@ namespace DynamicFluentAzure.Tests.Facade
             Assert.That(actual.Result.Id, Is.EqualTo(expected.Result.Id));
             Assert.That(actual.Result.ContainsKey("etag"));
             Assert.That(actual.Result.ContainsKey("timestamp"));
-        }
-
-        [Test]
-        public async Task ItShouldCacheTables()
-        {
-            // g
-            const string tablename = "sometable";
-            _client.FromTable(tablename);
-
-            // w
-            await _client.DefineTableAsync(_client.CreateCloudTable).ConfigureAwait(false);
-
-            // t
-            FluentCyan.Tables.ContainsKey(tablename).Should().BeTrue("Did not cache table");
         }
 
         [Test]
@@ -354,26 +373,6 @@ namespace DynamicFluentAzure.Tests.Facade
 
             // t
             triedToCreateTable.Should().BeFalse("tried to recreate table");
-        }
-
-        [Test]
-        public async Task ItShouldCreateTable_GivenTableHasNotBeenCached()
-        {
-            // g
-            const string tablename = "sometable";
-            var table = new CloudTable(new Uri("http://someurl.com"));
-            var createdTable = false;
-            _client.FromTable(tablename);
-
-            // w
-            await _client.DefineTableAsync(() =>
-            {
-                createdTable = true;
-                return Task.FromResult(table);
-            }).ConfigureAwait(false);
-
-            // t
-            createdTable.Should().BeTrue("did not create table");
         }
     }
 }

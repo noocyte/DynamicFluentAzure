@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
-using UXRisk.Lib.Common.Models;
-using Microsoft.WindowsAzure.Storage.Table;
-using UXRisk.Lib.Common.Infrastructure;
 using System.Globalization;
+using Microsoft.WindowsAzure.Storage.Table;
+using Newtonsoft.Json;
+using UXRisk.Lib.Common.Infrastructure;
+using UXRisk.Lib.Common.Models;
 
 namespace DynamicFluentAzure
 {
@@ -17,16 +17,21 @@ namespace DynamicFluentAzure
             {
                 json[field.Key] =
                     IsArray(field)
-                        ? JsonConvert.DeserializeObject<object[]>(field.Value.StringValue)
+                        ? InflateArray(field)
                         : field.Value.PropertyAsObject;
             }
             json.EnsureValidSystemProperties();
             return json;
         }
 
+        private static object[] InflateArray(KeyValuePair<string, EntityProperty> field)
+        {
+            return JsonConvert.DeserializeObject<object[]>(field.Value.StringValue);
+        }
+
         private static bool IsArray(KeyValuePair<string, EntityProperty> field)
         {
-            return field.Value.PropertyType.Equals("String") &&
+            return field.Value.PropertyType.Equals(EdmType.String) &&
                    field.Key.Contains("_ids") &&
                    field.Value.StringValue.StartsWith("[") &&
                    field.Value.StringValue.EndsWith("]");
@@ -41,7 +46,7 @@ namespace DynamicFluentAzure
             {
                 if (item.Key.Equals(EntityConstants.PartitionKey.ToLowerInvariant()) ||
                     item.Key.Equals(EntityConstants.RowKey.ToLowerInvariant()) ||
-                     item.Key.Equals("etag"))
+                    item.Key.Equals("etag"))
                     continue;
 
                 EntityProperty property = null;
@@ -63,14 +68,14 @@ namespace DynamicFluentAzure
                 else if (type.IsEnum)
                 {
                     var typeCode = ((Enum)value).GetTypeCode();
-                    if (typeCode <= TypeCode.Int32)
-                        property = new EntityProperty(Convert.ToInt32(value, CultureInfo.InvariantCulture));
-                    else
-                        property = new EntityProperty(Convert.ToInt64(value, CultureInfo.InvariantCulture));
+                    property = typeCode <= TypeCode.Int32
+                        ? new EntityProperty(Convert.ToInt32(value, CultureInfo.InvariantCulture))
+                        : new EntityProperty(Convert.ToInt64(value, CultureInfo.InvariantCulture));
                 }
                 else if (type == typeof(byte[]))
                     property = new EntityProperty((byte[])value);
-
+                else if (type == typeof(object[]))
+                    property = new EntityProperty(JsonConvert.SerializeObject(value));
                 if (property != null)
                     dict.Add(item.Key, property);
             }

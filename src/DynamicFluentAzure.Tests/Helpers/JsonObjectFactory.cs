@@ -43,6 +43,14 @@ namespace DynamicFluentAzure.Tests.Helpers
             return json;
         }
 
+        public static JsonObject CreateJsonObjectWithTimestamp(DateTimeOffset aTimestamp, string id = "something")
+        {
+            const string valueString = "something";
+            var json = new JsonObject { { "ETag", valueString }, { "Timestamp", aTimestamp }, { "id", id }, { "name", valueString } };
+            json.EnsureValidSystemProperties();
+            return json;
+        }
+
         public static JsonObject CreateJsonObjectWithETag()
         {
             const string valueString = "something";
