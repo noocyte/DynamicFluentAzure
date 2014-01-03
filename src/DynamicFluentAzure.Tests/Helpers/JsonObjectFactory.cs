@@ -5,6 +5,16 @@ namespace DynamicFluentAzure.Tests.Helpers
 {
     public static class JsonObjectFactory
     {
+        public static JsonObject[] CreateJsonObjectsForBatch(int numberOfObjects = 2)
+        {
+            var json = new JsonObject[numberOfObjects];
+
+            for (var i = 1; i <= numberOfObjects; i++)
+                json[i - 1] = CreateJsonObjectForPost(i.ToString());
+
+            return json;
+        }
+
         public static JsonObject CreateJsonObjectForPostWithArray(string id = "someId", string parentId = "",
             string name = "someName")
         {

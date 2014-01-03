@@ -34,6 +34,26 @@ namespace DynamicFluentAzure
             return this;
         }
 
+        public async Task<IEnumerable<Response<JsonObject>>> BatchPostAsync(IEnumerable<JsonObject> jsonObjects)
+        {
+            if (jsonObjects == null)
+                throw new ArgumentNullException("jsonObjects");
+
+            var table = await DefineTableAsync(CreateCloudTable).ConfigureAwait(false);
+            var batch = new TableBatchOperation();
+
+            foreach (var entity in jsonObjects.Select(json => json.ToDynamicEntity()))
+                batch.Add(TableOperation.Insert(entity));
+
+            var results = await table.ExecuteBatchAsync(batch).ConfigureAwait(false);
+
+            return results
+                .Select(result => result.Result as DynamicTableEntity)
+                .Select(entity => entity.ToJsonObject())
+                .Select(jsonObj => new Response<JsonObject>(HttpStatusCode.Created, jsonObj));
+        }
+
+
         public async Task<Response<JsonObject>> PostAsync(JsonObject json)
         {
             if (json == null)
@@ -67,9 +87,9 @@ namespace DynamicFluentAzure
             var json = new JsonObject();
             var status = HttpStatusCode.NotFound;
 
-// ReSharper disable UseMethodAny.3
+            // ReSharper disable UseMethodAny.3
             if (result.Count() <= 0) return new Response<JsonObject>(status, json);
-// ReSharper restore UseMethodAny.3
+            // ReSharper restore UseMethodAny.3
             json = result.First().ToJsonObject();
             status = HttpStatusCode.OK;
 

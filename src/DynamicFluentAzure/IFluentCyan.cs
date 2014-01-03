@@ -9,6 +9,7 @@ namespace DynamicFluentAzure
         IFluentCyan IntoTable(string tableName);
         IFluentCyan FromTable(string tableName);
         Task<Response<JsonObject>> PostAsync(JsonObject json);
+        Task<IEnumerable<Response<JsonObject>>> BatchPostAsync(IEnumerable<JsonObject> jsonObjects);
         Task<Response<JsonObject>> GetByIdAsync(string id);
         Task<Response<IEnumerable<JsonObject>>> GetAllAsync();
         Task<Response<JsonObject>> MergeAsync(JsonObject json);

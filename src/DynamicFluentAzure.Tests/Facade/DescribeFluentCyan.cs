@@ -162,6 +162,27 @@ namespace DynamicFluentAzure.Tests.Facade
         }
 
         [Test]
+        public async Task ItShouldBatchPostRecords_GivenValidJsonObjects()
+        {
+            // g 
+            var json = JsonObjectFactory.CreateJsonObjectsForBatch(20);
+
+            // w
+            var responses = await _client.IntoTable(TableName).BatchPostAsync(json).ConfigureAwait(false);
+
+            // t
+            var allResponses = await _client.FromTable(TableName).GetAllAsync().ConfigureAwait(false);
+            allResponses.Result.Count().Should().Be(20);
+
+            foreach (var response in responses)
+            {
+                response.Status.Should().Be(HttpStatusCode.Created);
+                response.Result.Id.Should().NotBeEmpty();
+            }
+        }
+
+
+        [Test]
         public async Task ItShouldCacheTables()
         {
             // g
