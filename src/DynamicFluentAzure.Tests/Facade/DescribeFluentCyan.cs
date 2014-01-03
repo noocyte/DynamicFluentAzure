@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading.Tasks;
 using DynamicFluentAzure.Tests.Helpers;
 using FluentAssertions;
+using Microsoft.WindowsAzure.Storage;
 using NUnit.Framework;
 using UXRisk.Lib.Common.Models;
 
@@ -60,7 +61,7 @@ namespace DynamicFluentAzure.Tests.Facade
                 async () => await _client.FromTable(invalidTableName).GetAllAsync().ConfigureAwait(false);
 
             // t
-            func.ShouldThrow<ArgumentException>();
+            func.ShouldThrow<StorageException>();
         }
 
         [Test]
@@ -199,13 +200,14 @@ namespace DynamicFluentAzure.Tests.Facade
             var json = JsonObjectFactory.CreateJsonObjectForPost(id: "one");
             var inserted = await _client.IntoTable(TableName).PostAsync(json).ConfigureAwait(false);
             var entityId = inserted.Result.Id;
-            var updatedJson = JsonObjectFactory.CreateJsonObjectForPost(id: entityId, name: "newName");
+            var updatedResult = await _client.FromTable(TableName).GetByIdAsync(entityId).ConfigureAwait(false);
+            var updatedJson = updatedResult.Result;
+            updatedJson["name"] = "newName";
 
             // w
-            var response = await _client.IntoTable(TableName).MergeAsync(updatedJson).ConfigureAwait(false);
+            var merged = await _client.IntoTable(TableName).MergeAsync(updatedJson).ConfigureAwait(false);
 
             // t
-            var merged = await _client.FromTable(TableName).GetByIdAsync(entityId).ConfigureAwait(false);
             merged.Result["name"].Should().Be("newName");
             merged.Result["ETag"].Should().NotBe(inserted.Result["ETag"]);
         }
@@ -282,7 +284,7 @@ namespace DynamicFluentAzure.Tests.Facade
             allEntities.Result.Count().Should().Be(1);
 
             // w
-            var deleteResponse = await _client.FromTable(TableName).DeleteAsync(entity).ConfigureAwait(false);
+            await _client.FromTable(TableName).DeleteAsync(allEntities.Result.First()).ConfigureAwait(false);
 
             // t
             allEntities = await _client.FromTable(TableName).GetAllAsync().ConfigureAwait(false);

@@ -123,19 +123,20 @@ namespace DynamicFluentAzure
             return new Response<JsonObject>(HttpStatusCode.OK, entity.ToJsonObject());
         }
 
-        //public async Task<Response<JsonObject>> DeleteAsync(JsonObject json)
-        //{
-        //    if (json == null)
-        //        throw new ArgumentNullException("json");
+        public async Task<Response<JsonObject>> DeleteAsync(JsonObject json)
+        {
+            if (json == null)
+                throw new ArgumentNullException("json");
 
-        //    var table = await DefineTable().ConfigureAwait(false);
-        //    var entity = json.ToCyanEntity();
-        //    var result = new JsonObject();
+            var table = await DefineTable().ConfigureAwait(false);
+            var entity = json.ToDynamicEntity();
 
-        //    await table.Delete(entity).ConfigureAwait(false);
+            var operation = TableOperation.Delete(entity);
+            var result = table.Execute(operation);
+            entity = result.Result as DynamicTableEntity;
 
-        //    return new Response<JsonObject>(HttpStatusCode.OK, result);
-        //}
+            return new Response<JsonObject>(HttpStatusCode.OK, entity.ToJsonObject());
+        }
 
         internal async Task<CloudTable> DefineTable()
         {
@@ -147,14 +148,6 @@ namespace DynamicFluentAzure
             await table.CreateIfNotExistsAsync();
             _tables.Add(_tableName, table);
             return _tables[_tableName];
-        }
-
-
-        
-
-        public Task<Response<JsonObject>> DeleteAsync(JsonObject json)
-        {
-            throw new NotImplementedException();
         }
     }
 }
