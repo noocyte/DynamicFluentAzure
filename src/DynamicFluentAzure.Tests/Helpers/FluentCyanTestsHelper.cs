@@ -1,7 +1,8 @@
 ﻿using System.Configuration;
+using System.Net;
 using System.Threading.Tasks;
-using FakeItEasy;
 using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.RetryPolicies;
 using Microsoft.WindowsAzure.Storage.Table;
 using UXRisk.Lib.Common.Interfaces.Services;
 using UXRisk.Lib.Common.Models;
@@ -33,21 +34,23 @@ namespace DynamicFluentAzure.Tests.Helpers
         {
             const string entityId = "one";
 
-            var firstEntity = JsonObjectFactory.CreateJsonObjectForPost(id: entityId);
+            var firstEntity = JsonObjectFactory.CreateJsonObjectForPost(entityId);
             var firstResponse = await client.IntoTable(tableName).PostAsync(firstEntity).ConfigureAwait(false);
 
             var secondEntity = await client.FromTable(tableName).GetByIdAsync(entityId).ConfigureAwait(false);
             secondEntity.Result.Add("newField", "newValue");
-            FluentCyanTestsHelper.AddCyanSpecificStuff(secondEntity, entityId);
+            AddCyanSpecificStuff(secondEntity, entityId);
 
-            var secondResponse = await client.IntoTable(tableName).MergeAsync(secondEntity.Result).ConfigureAwait(false);
+            await client.IntoTable(tableName).MergeAsync(secondEntity.Result).ConfigureAwait(false);
             return firstResponse;
         }
 
         internal static CloudTableClient GetTableClient()
         {
             var storageAccount = CloudStorageAccount.Parse(CloudConfigurationManager.GetSetting("StorageConnection"));
-            return storageAccount.CreateCloudTableClient();
+            var client = storageAccount.CreateCloudTableClient();
+            client.PayloadFormat = TablePayloadFormat.Json;
+            return client;
         }
     }
 }
