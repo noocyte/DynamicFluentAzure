@@ -11,15 +11,22 @@ namespace DynamicFluentAzure.Tests.Facade
     public class DescribeJsonObjectMapper
     {
         [Test]
-        public void ItComplains_WhenMappingFromJsonObject_GivenInvalidJsonObject()
+        public void ItCanMapFromDynamicTableEntity()
         {
-            // g 
+            // g
+            const string valueString = "something";
+            var aTimestamp = DateTimeOffset.UtcNow;
+            var ce = new DynamicTableEntity {ETag = valueString, Timestamp = aTimestamp};
+            ce.Properties.Add("id", new EntityProperty(valueString));
+            ce.Properties.Add("name", new EntityProperty(valueString));
+
+            var expected = JsonObjectFactory.CreateJsonObjectWithTimestamp(aTimestamp);
 
             // w
-            Action act = (() => JsonObjectMapper.ToDynamicEntity(null));
+            var json = ce.ToJsonObject();
 
             // t
-            act.ShouldThrow<ArgumentNullException>();
+            json.ShouldBeEquivalentTo(expected);
         }
 
         [Test]
@@ -36,22 +43,15 @@ namespace DynamicFluentAzure.Tests.Facade
         }
 
         [Test]
-        public void ItCanMapFromDynamicTableEntity()
+        public void ItComplains_WhenMappingFromJsonObject_GivenInvalidJsonObject()
         {
-            // g
-            const string valueString = "something";
-            var aTimestamp = DateTimeOffset.UtcNow;
-            var ce = new DynamicTableEntity { ETag = valueString, Timestamp = aTimestamp };
-            ce.Properties.Add("id", new EntityProperty(valueString));
-            ce.Properties.Add("name", new EntityProperty(valueString));
-
-            var expected = JsonObjectFactory.CreateJsonObjectWithTimestamp(aTimestamp);
+            // g 
 
             // w
-            var json = ce.ToJsonObject();
+            Action act = (() => JsonObjectMapper.ToDynamicEntity(null));
 
             // t
-            json.ShouldBeEquivalentTo(expected);
+            act.ShouldThrow<ArgumentNullException>();
         }
 
 
@@ -59,7 +59,7 @@ namespace DynamicFluentAzure.Tests.Facade
         public void ItShouldFlattenArrays()
         {
             // g 
-            var expected = JsonConvert.SerializeObject(new object[] { "1", "2", "3" });
+            var expected = JsonConvert.SerializeObject(new object[] {"1", "2", "3"});
             var json = JsonObjectFactory.CreateJsonObjectForPostWithArray();
 
             // w
@@ -73,7 +73,7 @@ namespace DynamicFluentAzure.Tests.Facade
         public void ItShouldInflateArrays()
         {
             // g
-            var expected = new object[] { "1", "2", "3" };
+            var expected = new object[] {"1", "2", "3"};
             var expectedString = JsonConvert.SerializeObject(expected);
 
             var ce = new DynamicTableEntity();

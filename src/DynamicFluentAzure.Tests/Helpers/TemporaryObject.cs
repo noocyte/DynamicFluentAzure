@@ -4,7 +4,10 @@ namespace DynamicFluentAzure.Tests.Helpers
 {
     internal class TemporaryObject : TableEntity
     {
-        public TemporaryObject() { }
+        public TemporaryObject()
+        {
+        }
+
         public TemporaryObject(string pk, string rk)
         {
             PartitionKey = pk;
