@@ -13,18 +13,18 @@ using UXRisk.Lib.Common.Models;
 namespace DynamicFluentAzure.Tests.Facade
 {
     [TestFixture]
-    public class DescribeFluentCyan
+    public class DescribeFluentAzure
     {
         [SetUp]
         public void Setup()
         {
-            _client = new FluentCyan(FluentCyanTestsHelper.GetTableClient());
+            _client = new FluentAzure(FluentAzureTestsHelper.GetTableClient());
         }
 
         [TearDown]
         public void Teardown()
         {
-            var table = FluentCyanTestsHelper.GetAzureTable<TemporaryObject>();
+            var table = FluentAzureTestsHelper.GetAzureTable<TemporaryObject>();
             var tobeDeleted = table.GetAll();
             foreach (var tableObject in tobeDeleted)
             {
@@ -32,7 +32,7 @@ namespace DynamicFluentAzure.Tests.Facade
             }
         }
 
-        private FluentCyan _client;
+        private FluentAzure _client;
         private const string TableName = "TemporaryObject";
 
         [Test]
@@ -40,8 +40,8 @@ namespace DynamicFluentAzure.Tests.Facade
         {
             // g
             const string tableName = "";
-            var fakeClient = FluentCyanTestsHelper.GetTableClient();
-            var client = new FluentCyan(fakeClient);
+            var fakeClient = FluentAzureTestsHelper.GetTableClient();
+            var client = new FluentAzure(fakeClient);
 
             // w
             Action act = () => client.FromTable(tableName);
@@ -97,7 +97,7 @@ namespace DynamicFluentAzure.Tests.Facade
         public async Task ItComplains_WhenDeleting_GivenOldETag()
         {
             // g 
-            var firstResponse = await FluentCyanTestsHelper.GivenOldETag(_client, TableName);
+            var firstResponse = await FluentAzureTestsHelper.GivenOldETag(_client, TableName);
 
             // w
             Func<Task<Response<JsonObject>>> func =
@@ -125,7 +125,7 @@ namespace DynamicFluentAzure.Tests.Facade
         public async Task ItComplains_WhenMerging_GivenOldETag()
         {
             // g 
-            var firstResponse = await FluentCyanTestsHelper.GivenOldETag(_client, TableName).ConfigureAwait(false);
+            var firstResponse = await FluentAzureTestsHelper.GivenOldETag(_client, TableName).ConfigureAwait(false);
 
             // w
             Func<Task<Response<JsonObject>>> func =
@@ -193,7 +193,7 @@ namespace DynamicFluentAzure.Tests.Facade
             await _client.DefineTableAsync(_client.CreateCloudTable).ConfigureAwait(false);
 
             // t
-            FluentCyan.Tables.ContainsKey(tablename).Should().BeTrue("Did not cache table");
+            FluentAzure.Tables.ContainsKey(tablename).Should().BeTrue("Did not cache table");
         }
 
         [Test]
@@ -294,7 +294,7 @@ namespace DynamicFluentAzure.Tests.Facade
             var objectId = Guid.NewGuid().ToString();
 
             var tableObj = new TemporaryObject("PK", objectId) {id = objectId, sys_deleted = true};
-            var table = FluentCyanTestsHelper.GetAzureTable<TemporaryObject>();
+            var table = FluentAzureTestsHelper.GetAzureTable<TemporaryObject>();
             table.Add(tableObj);
 
             // w
@@ -336,7 +336,7 @@ namespace DynamicFluentAzure.Tests.Facade
             // g
             var item1 = new TemporaryObject("PK", Guid.NewGuid().ToString()) {id = "item1"};
             var item2 = new TemporaryObject("PK", Guid.NewGuid().ToString()) {id = "item2"};
-            var table = FluentCyanTestsHelper.GetAzureTable<TemporaryObject>();
+            var table = FluentAzureTestsHelper.GetAzureTable<TemporaryObject>();
             table.Add(item1);
             table.Add(item2);
 
@@ -360,7 +360,7 @@ namespace DynamicFluentAzure.Tests.Facade
 
             var json = JsonObjectFactory.CreateJsonObject(aTimestamp, objectId);
             var tableObj = new TemporaryObject("PK", objectId) {id = objectId};
-            var table = FluentCyanTestsHelper.GetAzureTable<TemporaryObject>();
+            var table = FluentAzureTestsHelper.GetAzureTable<TemporaryObject>();
             table.Add(tableObj);
 
             var expected = new Response<JsonObject>(HttpStatusCode.OK, json);
@@ -381,7 +381,7 @@ namespace DynamicFluentAzure.Tests.Facade
             // g
             const string tablename = "sometable";
             var table = new CloudTable(new Uri("http://someurl.com"));
-            FluentCyan.Tables.Add(tablename, table);
+            FluentAzure.Tables.Add(tablename, table);
             var triedToCreateTable = false;
             _client.FromTable(tablename);
 

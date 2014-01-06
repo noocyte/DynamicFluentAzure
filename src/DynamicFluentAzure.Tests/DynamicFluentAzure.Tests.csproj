@@ -97,9 +97,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Facade\DescribeFluentCyan.cs" />
+    <Compile Include="Facade\DescribeFluentAzure.cs" />
     <Compile Include="Facade\DescribeJsonObjectMapper.cs" />
-    <Compile Include="Helpers\FluentCyanTestsHelper.cs" />
+    <Compile Include="Helpers\FluentAzureTestsHelper.cs" />
     <Compile Include="Helpers\JsonObjectFactory.cs" />
     <Compile Include="Helpers\TemporaryObject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

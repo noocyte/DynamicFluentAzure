@@ -1,19 +1,17 @@
 ﻿using System.Configuration;
-using System.Net;
 using System.Threading.Tasks;
+using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.RetryPolicies;
 using Microsoft.WindowsAzure.Storage.Table;
 using UXRisk.Lib.Common.Interfaces.Services;
 using UXRisk.Lib.Common.Models;
 using UXRisk.Lib.Common.Services;
-using Microsoft.WindowsAzure;
 
 namespace DynamicFluentAzure.Tests.Helpers
 {
-    public static class FluentCyanTestsHelper
+    public static class FluentAzureTestsHelper
     {
-        internal static void AddCyanSpecificStuff(Response<JsonObject> updatedJson, string entityId)
+        internal static void AddAzureSpecificStuff(Response<JsonObject> updatedJson, string entityId)
         {
             updatedJson.Result.Add("RowKey", entityId);
             updatedJson.Result.Add("PartitionKey", "PK");
@@ -30,7 +28,7 @@ namespace DynamicFluentAzure.Tests.Helpers
             return new AzureTable<T>(GetAccount());
         }
 
-        internal static async Task<Response<JsonObject>> GivenOldETag(FluentCyan client, string tableName)
+        internal static async Task<Response<JsonObject>> GivenOldETag(FluentAzure client, string tableName)
         {
             const string entityId = "one";
 
@@ -39,7 +37,7 @@ namespace DynamicFluentAzure.Tests.Helpers
 
             var secondEntity = await client.FromTable(tableName).GetByIdAsync(entityId).ConfigureAwait(false);
             secondEntity.Result.Add("newField", "newValue");
-            AddCyanSpecificStuff(secondEntity, entityId);
+            AddAzureSpecificStuff(secondEntity, entityId);
 
             await client.IntoTable(tableName).MergeAsync(secondEntity.Result).ConfigureAwait(false);
             return firstResponse;

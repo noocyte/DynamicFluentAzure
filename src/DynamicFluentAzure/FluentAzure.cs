@@ -1,31 +1,31 @@
-﻿using Microsoft.WindowsAzure.Storage.Table;
-using System;
-using System.Linq;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.WindowsAzure.Storage.Table;
 using UXRisk.Lib.Common.Models;
 
 namespace DynamicFluentAzure
 {
-    public class FluentCyan : IFluentCyan
+    public class FluentAzure : IFluentAzure
     {
-        private string _tableName;
-        private readonly CloudTableClient _client;
         internal static IDictionary<string, CloudTable> Tables;
+        private readonly CloudTableClient _client;
+        private string _tableName;
 
-        public FluentCyan(CloudTableClient client)
+        public FluentAzure(CloudTableClient client)
         {
             _client = client;
             Tables = new Dictionary<string, CloudTable>();
         }
 
-        public IFluentCyan IntoTable(string tableName)
+        public IFluentAzure IntoTable(string tableName)
         {
             return FromTable(tableName);
         }
 
-        public IFluentCyan FromTable(string tableName)
+        public IFluentAzure FromTable(string tableName)
         {
             if (String.IsNullOrEmpty(tableName))
                 throw new ArgumentNullException("tableName");
@@ -77,9 +77,9 @@ namespace DynamicFluentAzure
             var query =
                 new TableQuery<DynamicTableEntity>();
             query.Where(TableQuery.CombineFilters(
-                 TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, "PK"),
-                 TableOperators.And,
-                 TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, id)));
+                TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, "PK"),
+                TableOperators.And,
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, id)));
             query.Where(TableQuery.GenerateFilterConditionForBool("sys_deleted", "ne", true));
 
             var items = table.ExecuteQuery(query);
